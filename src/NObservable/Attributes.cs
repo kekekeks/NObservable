@@ -6,10 +6,4 @@ namespace NObservable
     public class ObservableAttribute : Attribute
     {
     }
-
-    [AttributeUsage(AttributeTargets.Property)]
-    public class Computed : Attribute
-    {
-        
-    }
 }

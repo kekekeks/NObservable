@@ -41,7 +41,7 @@ namespace ObservableTests
             var o = new MyObservable {Prop1 = 1};
             var sequence = new List<int>();
             
-            NObservableEngine.Autorun(() =>
+            Observe.Autorun(() =>
             {
                 sequence.Add(o.Prop1);
                 if (o.Prop1 == 10)
@@ -74,17 +74,17 @@ namespace ObservableTests
                 Prop2 = 1
             };
             var seq = new List<int>();
-            NObservableEngine.Autorun(() =>
+            Observe.Autorun(() =>
             {
                 seq.Add(o.Prop1);
                 seq.Add(o.Prop2);
             });
-            NObservableEngine.RunInAction(() =>
+            Observe.RunInAction(() =>
             {
                 o.Prop1 = 2;
                 o.Prop2 = 2;
             });
-            NObservableEngine.RunInAction(() =>
+            Observe.RunInAction(() =>
             {
                 o.Prop1 = 3;
                 o.Prop1 = 4;

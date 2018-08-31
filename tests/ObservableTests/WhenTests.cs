@@ -18,7 +18,7 @@ namespace ObservableTests
         {
             var ob = new Observable();
             int triggerNumber = 0;
-            NObservableEngine.When(() => ob.Value == 10, () => { triggerNumber++; });
+            Observe.When(() => ob.Value == 10, () => { triggerNumber++; });
             ob.Value = 5;
             ob.Value = 6;
             Assert.Equal(0, triggerNumber);
@@ -34,7 +34,7 @@ namespace ObservableTests
         {
             var ob = new Observable();
             int triggerNumber = 0;
-            var d = NObservableEngine.When(() => ob.Value == 10, () => { triggerNumber++; });
+            var d = Observe.When(() => ob.Value == 10, () => { triggerNumber++; });
             ob.Value = 5;
             ob.Value = 6;
             Assert.Equal(0, triggerNumber);
@@ -51,7 +51,7 @@ namespace ObservableTests
         {
             var ob = new Observable();
             var triggered = false;
-            NObservableEngine.When(() => ob.Value == 10)
+            Observe.When(() => ob.Value == 10)
                 .ContinueWith(t =>
                 {
                     if (t.IsCompletedSuccessfully)
@@ -69,7 +69,7 @@ namespace ObservableTests
             var ob = new Observable();
             var triggered = false;
             var exception = false;
-            NObservableEngine.When(() =>
+            Observe.When(() =>
                 {
                     if(ob.Value == 10)
                         throw new Exception("TEST");

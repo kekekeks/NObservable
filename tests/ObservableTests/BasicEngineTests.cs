@@ -49,7 +49,7 @@ namespace ObservableTests
             p.Value = 1;
             var sequence = new List<int>();
             
-            NObservableEngine.Autorun(() =>
+            Observe.Autorun(() =>
             {
                 sequence.Add(p.Value);
                 if (p.Value == 10)
@@ -70,7 +70,7 @@ namespace ObservableTests
         {
             var p = new PropertyHelper<int>(1) {Value = 1};
             var seq = new List<int>();
-            var d = NObservableEngine.Autorun(() => seq.Add(p.Value));
+            var d = Observe.Autorun(() => seq.Add(p.Value));
             p.Value = 2;
             d.Dispose();
             p.Value = 3;
@@ -83,7 +83,7 @@ namespace ObservableTests
             var p = new PropertyHelper<int>(1) {Value = 1};
             var seq = new List<int>();
             IDisposable d = null;
-            d = NObservableEngine.Autorun(() =>
+            d = Observe.Autorun(() =>
             {
                 seq.Add(p.Value);
                 if(p.Value == 2)
@@ -100,17 +100,17 @@ namespace ObservableTests
             var p1 = new PropertyHelper<int>(1) {Value = 1};
             var p2 = new PropertyHelper<int>(2) {Value = 1};
             var seq = new List<int>();
-            NObservableEngine.Autorun(() =>
+            Observe.Autorun(() =>
             {
                 seq.Add(p1.Value);
                 seq.Add(p2.Value);
             });
-            NObservableEngine.RunInAction(() =>
+            Observe.RunInAction(() =>
             {
                 p1.Value = 2;
                 p2.Value = 2;
             });
-            NObservableEngine.RunInAction(() =>
+            Observe.RunInAction(() =>
             {
                 p1.Value = 3;
                 p1.Value = 4;

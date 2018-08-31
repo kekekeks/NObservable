@@ -20,7 +20,7 @@ namespace NObservable
         
         public void Dispose()
         {
-            if(NObservableEngine.Context != _context)
+            if(Observe.Context != _context)
                 throw new InvalidOperationException("Call from non-owner thread");
             if (Subscriptions != null)
             {

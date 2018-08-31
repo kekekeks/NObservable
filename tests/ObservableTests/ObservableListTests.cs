@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using NObservable;
 using Xunit;
-using static NObservable.NObservableEngine;
+using static NObservable.Observe;
 namespace ObservableTests
 {
     public class ObservableListTests : TestBase

@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using NObservable.Internals;
-using static NObservable.NObservableEngine;
+using static NObservable.Observe;
 namespace NObservable
 {
     public sealed class ObservableList<T> : IList<T>

@@ -20,9 +20,26 @@ namespace NObservable
                 TriggeredSubscribers.Add(sub);
             }
         }
-        
-        
-        public IScheduler Scheduler { get; set; }
+
+
+        private IScheduler _scheduler;
+        public IScheduler Scheduler
+        {
+            get
+            {
+                if (_scheduler == null)
+                {
+                    if (SynchronizationContext.Current != null)
+                        _scheduler = new SynchronizationContextScheduler(SynchronizationContext.Current);
+                    else
+                        _scheduler = new ImmediateScheduler();
+                }
+                return _scheduler;
+            }
+            set => _scheduler = value;
+        }
+
+
         private ActionContext _currentAction;
         public int NextObjectId { get; set; }
         private readonly Stack<List<TrackedValueId>> _trackers = new Stack<List<TrackedValueId>>();
@@ -31,20 +48,6 @@ namespace NObservable
 
         private readonly Dictionary<TrackedValueId, HashSet<Subscription>> _subscribers =
             new Dictionary<TrackedValueId, HashSet<Subscription>>();
-
-        IScheduler GetScheduler()
-        {
-            if (Scheduler == null)
-            {
-                if (SynchronizationContext.Current != null)
-                    Scheduler = new SynchronizationContextScheduler(SynchronizationContext.Current);
-                else
-                    throw new InvalidOperationException(
-                        "CurrentScheduler id null and SynchronizationContext.Current is also null");
-            }
-
-            return Scheduler;
-        }
 
         public void RunInAction(Action action)
         {

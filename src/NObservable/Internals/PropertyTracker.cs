@@ -9,8 +9,8 @@ namespace NObservable.Internals
 
         public static PropertyTracker Create() => new PropertyTracker()
         {
-            _context = NObservableEngine.Context,
-            ObjectId = NObservableEngine.Context.NextObjectId++
+            _context = Observe.Context,
+            ObjectId = Observe.Context.NextObjectId++
         };
 
         public static void Init(ref PropertyTracker field)
@@ -21,11 +21,11 @@ namespace NObservable.Internals
 
         public void TrackGet(int token)
         {
-            if (NObservableEngine.Context == _context)
+            if (Observe.Context == _context)
             {
                 _context.TrackGet(ObjectId, token);
             }
-            else if(NObservableEngine.Context.IsTracking)
+            else if(Observe.Context.IsTracking)
                 throw new InvalidOperationException("Call from non-owner thread");
         }
 
@@ -37,7 +37,7 @@ namespace NObservable.Internals
 
         public void EnterTrackSet()
         {
-            if (NObservableEngine.Context != _context)
+            if (Observe.Context != _context)
                 throw new InvalidOperationException("Call from non-owner thread");
             _context.PauseGetTracking();
         }

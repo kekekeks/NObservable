@@ -5,17 +5,11 @@ using NObservable.Scheduling;
 
 namespace NObservable
 {
-    public static class NObservableEngine
+    public static class Observe
     {
         [ThreadStatic] private static Context _context;
         internal static Context Context => _context ?? (_context = new Context());
         
-        public static IScheduler NObservableScheduler
-        {
-            get => Context.Scheduler;
-            set => Context.Scheduler = value;
-        }
-
         public static IDisposable Autorun(Action action) => Autorun(action, null);
         
         public static IDisposable Autorun(Action action, AutorunOptions options)
