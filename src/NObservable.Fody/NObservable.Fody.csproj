@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>net46;netstandard2.0</TargetFrameworks>
+        <DebugType>portable</DebugType>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="FodyHelpers" Version="3.1.4" />
+    </ItemGroup>
+    <Target Name="CopyWeavers" AfterTargets="CopyFilesToOutputDirectory">
+        <Copy Condition="'$(TargetFramework)' == 'netstandard2.0'" SourceFiles="$(OutputPath)/NObservable.Fody.dll" DestinationFolder="$(MSBuildThisfileDirectory)\..\..\Tools" />
+        <Copy Condition="'$(TargetFramework)' == 'netstandard2.0'" SourceFiles="$(OutputPath)/NObservable.Fody.pdb" DestinationFolder="$(MSBuildThisfileDirectory)\..\..\Tools" />
+    </Target>
+</Project>
