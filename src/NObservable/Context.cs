@@ -63,8 +63,9 @@ namespace NObservable
                     _currentAction= null;
                 else
                     _currentAction.Depth--;
-                foreach (var item in ctx.TriggeredSubscribers)
-                    Schedule(item);
+                if(ctx.TriggeredSubscribers != null)
+                    foreach (var item in ctx.TriggeredSubscribers)
+                        Schedule(item);
             }
         }
 
