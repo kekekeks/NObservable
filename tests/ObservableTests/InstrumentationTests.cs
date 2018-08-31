@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using NObservable;
@@ -10,7 +11,26 @@ namespace ObservableTests
         [Observable]
         public class MyObservable
         {
-            public int Prop1 { get; set; }
+            private int _wtf;
+            private int _prop1;
+
+            public MyObservable()
+            {
+                _wtf = 10;
+                _prop1 = 15;
+            }
+
+            public int Prop1
+            {
+                get => _prop1;
+                set
+                {
+                    Console.WriteLine("X");
+                    _prop1 = value;
+                    Console.WriteLine("Y");
+                }
+            }
+
             public int Prop2 { get; set; }
         }
         

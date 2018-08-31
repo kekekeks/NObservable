@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
@@ -5,6 +7,7 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
 using ExceptionHandler = Mono.Cecil.Cil.ExceptionHandler;
+using OpCode = Mono.Cecil.Cil.OpCode;
 using OpCodes = Mono.Cecil.Cil.OpCodes;
 
 namespace NObservable.Fody
@@ -33,13 +36,22 @@ namespace NObservable.Fody
             type.Fields.Add(field);
             foreach (var ctor in type.GetConstructors())
             {
-                var il = ctor.Body.GetILProcessor();
-                var first = il.Body.Instructions.First();
-                il.InsertBefore(first,
-                    il.Create(OpCodes.Ldarg_0),
-                    il.Create(OpCodes.Ldflda, field),
-                    il.Create(OpCodes.Call, context.PropertyTrackerInitReference));
+                using (var il = new Helper(ctor))
+                {
+                    var first = ctor.Body.Instructions.First();
+                    il.AddBefore(first, new Instructions
+                    {
+                        OpCodes.Ldarg_0,
+                        {OpCodes.Ldflda, field},
+                        {OpCodes.Call, context.PropertyTrackerInitReference}
+
+                    });
+                }
             }
+            
+            
+            
+            
             return field;
         }
 
@@ -88,135 +100,180 @@ namespace NObservable.Fody
             var setter = prop.SetMethod;
             var propId = SetNextPropertyId(context, getter.DeclaringType);
             var trackerField = FindOrInjectTrackerField(context, getter.DeclaringType);
-            
-            var getterIl = getter.Body.GetILProcessor();
-            var getterFirst = getterIl.Body.Instructions.First();
 
-           
-            getterIl.InsertBefore(getterFirst,
-                //this._tracker.TrackGet(const propId)
-                getterIl.Create(OpCodes.Ldarg_0),
-                getterIl.Create(OpCodes.Ldflda, trackerField),
-                getterIl.Create(OpCodes.Ldc_I4, propId),
-                getterIl.Create(OpCodes.Call, context.PropertyTrackerTrackGetReference)
-            );
-            
-            var setterIl = setter.Body.GetILProcessor();
-            var oldValueVariable = new VariableDefinition(prop.PropertyType);
-            var oldValueIsSet = new VariableDefinition(context.TypeSystem.BooleanReference);
-            setter.Body.Variables.Add(oldValueVariable);
-            setter.Body.Variables.Add(oldValueIsSet);
-            
-            var originalSetterFirst = setterIl.Body.Instructions.First();
-            
-            // Prologue
-
-
-            setterIl.InsertBefore(originalSetterFirst,
-                // var oldValueIsSet = false
-                setterIl.Create(OpCodes.Ldc_I4_0),
-                setterIl.Create(OpCodes.Stloc, oldValueIsSet),
-
-                // this._tracker.EnterTrackSet();
-                setterIl.Create(OpCodes.Ldarg_0),
-                setterIl.Create(OpCodes.Ldflda, trackerField),
-                setterIl.Create(OpCodes.Call, context.PropertyTrackerEnterTrackSetReference),
-
-                // var old = this.Property;
-                setterIl.Create(OpCodes.Ldarg_0),
-                setterIl.Create(OpCodes.Callvirt, getter),
-                setterIl.Create(OpCodes.Stloc, oldValueVariable),
-
-                // oldValueIsSet = true
-                setterIl.Create(OpCodes.Ldc_I4_1),
-                setterIl.Create(OpCodes.Stloc, oldValueIsSet)
-            );
-                
-
-            // New final return instruction
-            
-            var lastRet = setterIl.Create(OpCodes.Ret);
-            setterIl.Append(lastRet);
-
-            var leaveTry = setterIl.Create(OpCodes.Leave_S, lastRet);
-            if (lastRet.Previous.OpCode == OpCodes.Ret)
-                setterIl.Replace(lastRet.Previous, leaveTry);
-            else
-                setterIl.InsertBefore(lastRet, leaveTry);
-            
-
-            var genericTrackSet = new GenericInstanceMethod(context.PropertyTrackerTrackSetReference)
+            using (var getterIl = new Helper(getter))
             {
-                GenericArguments = {prop.PropertyType},
-                
-                
-            };
+                var getterFirst = getter.Body.Instructions.First();
+                getterIl.AddBefore(getterFirst, new Instructions
+                {
+                    OpCodes.Ldarg_0,
+                    {OpCodes.Ldflda, trackerField},
+                    {OpCodes.Ldc_I4, propId},
+                    {OpCodes.Call, context.PropertyTrackerTrackGetReference}
 
-
-            //var leaveFinally = setterIl.Create(OpCodes.Leave_S, lastRet);
-            var leaveFinally = setterIl.Create(OpCodes.Endfinally);
-            
-            
-            var fastFinallyInstructions = new[]
-            {
-                setterIl.Create(OpCodes.Ldarg_0),
-                setterIl.Create(OpCodes.Ldflda, trackerField),
-                setterIl.Create(OpCodes.Call, context.PropertyTrackerLeaveTrackSetReference)
-            };
-
-            var finallyInstructions = new[]
-            {
-                // if(!oldValueIsSet) goto: fastFinally
-                setterIl.Create(OpCodes.Ldloc, oldValueIsSet),
-                setterIl.Create(OpCodes.Brfalse, fastFinallyInstructions.First()),
-                
-                // this._tracker.TrackSet({id}, oldValue, Prop ({this._tracker.LeaveTrackSet()}))
-                setterIl.Create(OpCodes.Ldarg_0),
-                setterIl.Create(OpCodes.Ldflda, trackerField),
-
-                setterIl.Create(OpCodes.Ldc_I4, propId),
-
-                setterIl.Create(OpCodes.Ldloc, oldValueVariable),
-
-                setterIl.Create(OpCodes.Ldarg_0),
-                setterIl.Create(OpCodes.Callvirt, getter),
-
-                // this._tracker.LeaveTrackSet()
-                setterIl.Create(OpCodes.Ldarg_0),
-                setterIl.Create(OpCodes.Ldflda, trackerField),
-                setterIl.Create(OpCodes.Call, context.PropertyTrackerLeaveTrackSetReference),
-
-                setterIl.Create(OpCodes.Call, genericTrackSet),
-                setterIl.Create(OpCodes.Br, leaveFinally)
-            };
-            
-
-            setterIl.InsertBefore(lastRet, finallyInstructions);
-            setterIl.InsertBefore(lastRet, fastFinallyInstructions);
-            setterIl.InsertBefore(lastRet, leaveFinally);
-
-
-            foreach (var i in setter.Body.Instructions.Where(x => x.OpCode == OpCodes.Ret && x != lastRet).ToList())
-            {
-                setterIl.Replace(i, setterIl.Create(OpCodes.Leave_S, lastRet));
+                });
             }
 
-            setter.Body.ExceptionHandlers.Add(new ExceptionHandler(ExceptionHandlerType.Finally)
+            using (var setterIl = new Helper(setter))
             {
-                TryStart = setterIl.Body.Instructions.First(),
-                TryEnd = leaveTry.Next,
-                HandlerStart = leaveTry.Next,
-                HandlerEnd = leaveFinally.Next
-            });
-            setter.Body.MaxStackSize += 2;
+                var oldValueVariable = new VariableDefinition(prop.PropertyType);
+                var oldValueIsSet = new VariableDefinition(context.TypeSystem.BooleanReference);
+                setter.Body.Variables.Add(oldValueVariable);
+                setter.Body.Variables.Add(oldValueIsSet);
+
+
+                var originalSetterFirst = setter.Body.Instructions.First();
+
+                // Prologue
+
+
+                setterIl.AddBefore(originalSetterFirst, new Instructions
+                {
+                    // var oldValueIsSet = false
+                    {OpCodes.Ldc_I4_0},
+                    {OpCodes.Stloc, oldValueIsSet},
+
+                    // this._tracker.EnterTrackSet();
+                    {OpCodes.Ldarg_0},
+                    {OpCodes.Ldflda, trackerField},
+                    {OpCodes.Call, context.PropertyTrackerEnterTrackSetReference},
+
+                    // var old = this.Property;
+                    {OpCodes.Ldarg_0},
+                    {OpCodes.Callvirt, getter},
+                    {OpCodes.Stloc, oldValueVariable},
+
+                    // oldValueIsSet = true
+                    {OpCodes.Ldc_I4_1},
+                    {OpCodes.Stloc, oldValueIsSet}
+                });
+
+
+                // New final return instruction
+
+                var lastRet = Instruction.Create(OpCodes.Ret);
+                setterIl.Append(lastRet);
+
+                var leaveTry = Instruction.Create(OpCodes.Leave_S, lastRet);
+                if (lastRet.Previous.OpCode == OpCodes.Ret)
+                    setterIl.Replace(lastRet.Previous, leaveTry);
+                else
+                    setterIl.AddBefore(lastRet, leaveTry);
+
+
+                var genericTrackSet = new GenericInstanceMethod(context.PropertyTrackerTrackSetReference)
+                {
+                    GenericArguments = {prop.PropertyType},
+
+
+                };
+
+
+                //var leaveFinally = setterIl.Create(OpCodes.Leave_S, lastRet);
+                var leaveFinally = Instruction.Create(OpCodes.Endfinally);
+
+
+                var fastFinallyInstructions = new Instructions
+                {
+                    OpCodes.Ldarg_0,
+                    {OpCodes.Ldflda, trackerField},
+                    {OpCodes.Call, context.PropertyTrackerLeaveTrackSetReference}
+                };
+
+                var finallyInstructions = new Instructions
+                {
+                    // if(!oldValueIsSet) goto: fastFinally
+                    {OpCodes.Ldloc, oldValueIsSet},
+                    {OpCodes.Brfalse, fastFinallyInstructions.First()},
+
+                    // this._tracker.TrackSet({id}, oldValue, Prop ({this._tracker.LeaveTrackSet()}))
+                    {OpCodes.Ldarg_0},
+                    {OpCodes.Ldflda, trackerField},
+
+                    {OpCodes.Ldc_I4, propId},
+
+                    {OpCodes.Ldloc, oldValueVariable},
+
+                    {OpCodes.Ldarg_0},
+                    {OpCodes.Callvirt, getter},
+
+                    // this._tracker.LeaveTrackSet()
+                    {OpCodes.Ldarg_0},
+                    {OpCodes.Ldflda, trackerField},
+                    {OpCodes.Call, context.PropertyTrackerLeaveTrackSetReference},
+
+                    {OpCodes.Call, genericTrackSet},
+                    {OpCodes.Br, leaveFinally}
+                };
+
+
+                setterIl.AddBefore(lastRet, finallyInstructions);
+                setterIl.AddBefore(lastRet, fastFinallyInstructions);
+                setterIl.AddBefore(lastRet, leaveFinally);
+
+
+                foreach (var i in setter.Body.Instructions.Where(x => x.OpCode == OpCodes.Ret && x != lastRet).ToList())
+                {
+                    setterIl.Replace(i, Instruction.Create(OpCodes.Leave_S, lastRet));
+                }
+
+                setter.Body.ExceptionHandlers.Add(new ExceptionHandler(ExceptionHandlerType.Finally)
+                {
+                    TryStart = setter.Body.Instructions.First(),
+                    TryEnd = leaveTry.Next,
+                    HandlerStart = leaveTry.Next,
+                    HandlerEnd = leaveFinally.Next
+                });
+                setter.Body.MaxStackSize += 2;
+            }
         }
 
-        static ILProcessor InsertBefore(this ILProcessor processor, Instruction before,
-            params Instruction[] instructions)
+        class Helper : IDisposable
         {
-            foreach (var i in instructions)
-                processor.InsertBefore(before, i);
-            return processor;
+            private readonly MethodDefinition _method;
+            private ILProcessor _processor;
+            
+            public Helper(MethodDefinition method)
+            {
+                _method = method;
+                _processor = method.Body.GetILProcessor();
+            }
+
+            public Helper AddBefore(Instruction before, params Instruction[] instructions)
+                => AddBefore(before, (IEnumerable<Instruction>) instructions);
+            
+            public Helper AddBefore(Instruction before, IEnumerable<Instruction> instructions)
+            {
+                foreach (var i in instructions)
+                    _processor.InsertBefore(before, i);
+                
+                return this;
+            }
+
+            public void Append(params Instruction[] instructions)
+            {
+                foreach (var i in instructions)
+                    _processor.Append(i);
+            }
+
+            public void Replace(Instruction what, Instruction with)
+            {
+                _processor.Replace(what, with);
+            }
+
+            public void Dispose() => _method.UpdateDebugInfo();
         }
+
+        class Instructions : List<Instruction>
+        {
+
+            public void Add(OpCode opcode) => Add(Instruction.Create(opcode));
+            public void Add(OpCode opcode, int op) => Add(Instruction.Create(opcode, op));
+            public void Add(OpCode opcode, MethodReference op) => Add(Instruction.Create(opcode, op));
+            public void Add(OpCode opcode, VariableDefinition op) => Add(Instruction.Create(opcode, op));
+            public void Add(OpCode opcode, FieldReference op) => Add(Instruction.Create(opcode, op));
+            public void Add(OpCode opcode, Instruction op) => Add(Instruction.Create(opcode, op));
+        }
+
     }
 }
