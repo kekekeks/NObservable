@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using NObservable.Scheduling;
 
 namespace Microsoft.AspNetCore.Blazor.Builder
@@ -7,20 +8,9 @@ namespace Microsoft.AspNetCore.Blazor.Builder
     {
         public static void UseNObservable(this IBlazorApplicationBuilder app)
         {
-            NObservable.Configuration.NObservableConfiguration.CurrentThread.Scheduler = new BlazorScheduler(app);
+            NObservable.Configuration.NObservableConfiguration.CurrentThread.Scheduler =
+                new SynchronizationContextScheduler(SynchronizationContext.Current);
         }
     }
 
-    public class BlazorScheduler : IScheduler
-    {
-        public BlazorScheduler(IBlazorApplicationBuilder app)
-        {
-            
-        }
-
-        public void Execute(Action action, TimeSpan? delayed = null)
-        {
-            action();
-        }
-    }
 }

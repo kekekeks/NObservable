@@ -301,7 +301,57 @@ namespace NObservable.Fody
                 });
                 
             }
+
+            if (!(type.Methods.Any(m => m.Name == "ShouldRender" && m.DeclaringType == type)))
+            {
+                var blazorComponent = type.FindBaseType(t =>
+                    t.FullName == "Microsoft.AspNetCore.Blazor.Components.BlazorComponent");
+                if (blazorComponent != null)
+                {
+                    var baseMethod = blazorComponent.Methods.First(m =>
+                        m.Name == "ShouldRender" && m.Attributes.HasFlag(MethodAttributes.Virtual));
+                    var shouldRender = CreateMethodOverride(type, baseMethod);
+                    using (var il = new Helper(shouldRender))
+                    {
+                        il.Append(new Instructions
+                        {
+                            OpCodes.Ldarg_0,
+                            {OpCodes.Ldfld, field},
+                            {OpCodes.Callvirt, context.BlazorComponentHelperShouldRenderReference},
+                            OpCodes.Ret
+                        });
+                    }
+                    
+                }
+            }
         }
+
+        static TypeDefinition FindBaseType(this TypeDefinition def, Func<TypeDefinition, bool> condition)
+        {
+            var b = def?.BaseType.Resolve();
+            if (b == null)
+                return null;
+            if (condition(b))
+                return b;
+            return FindBaseType(b, condition);
+        }
+        
+        
+        static MethodDefinition CreateMethodOverride(TypeDefinition targetType, MethodDefinition baseMethod)
+        {
+            MethodDefinition newMethod = new MethodDefinition(baseMethod.Name,
+                baseMethod.Attributes & ~MethodAttributes.NewSlot,
+                baseMethod.ReturnType);
+            newMethod.Name = baseMethod.Name;
+            if (baseMethod.HasParameters)
+                throw new NotImplementedException("TODO: Methods with parameters aren't supported yet");
+
+            newMethod.ImplAttributes = baseMethod.ImplAttributes;
+            newMethod.SemanticsAttributes = baseMethod.SemanticsAttributes;
+            targetType.Methods.Add(newMethod);
+            return newMethod;
+        }
+
 
         class Helper : IDisposable
         {
@@ -327,7 +377,8 @@ namespace NObservable.Fody
                 return this;
             }
 
-            public void Append(params Instruction[] instructions)
+            public void Append(params Instruction[] instructions) => Append((IEnumerable<Instruction>) instructions);
+            public void Append(IEnumerable<Instruction> instructions)
             {
                 foreach (var i in instructions)
                     _processor.Append(i);

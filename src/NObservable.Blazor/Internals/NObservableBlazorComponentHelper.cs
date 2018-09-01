@@ -21,6 +21,8 @@ namespace NObservable.Blazor.Internals
                     BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic));
 
 
+        private bool _shouldRender;
+
 
         public NObservableBlazorComponentHelper(BlazorComponent component)
         {
@@ -29,6 +31,7 @@ namespace NObservable.Blazor.Internals
 
         public void OnRenderEnter()
         {
+            _shouldRender = false;
             if (_subscription != null)
             {
                 _subscription.Dispose();
@@ -55,6 +58,7 @@ namespace NObservable.Blazor.Internals
                     if (_subscription == subscription)
                     {
                         _subscription = null;
+                        _shouldRender = true;
                         _stateChanged(_component);
                     }
                 };
@@ -62,5 +66,7 @@ namespace NObservable.Blazor.Internals
                 _subscription = subscription;
             }
         }
+
+        public bool ShouldRender() => _shouldRender;
     }
 }
