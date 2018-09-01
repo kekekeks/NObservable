@@ -8,17 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Blazor" Version="0.5.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Blazor.Browser" Version="0.5.1" />
+    <PackageReference Include="Fody" Version="3.1.4" PrivateAssets="None" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\NObservable\NObservable.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="Microsoft.AspNetCore.Blazor.Browser, Version=0.5.1.0, Culture=neutral, PublicKeyToken=null">
-      <HintPath>..\..\..\..\.nuget\packages\microsoft.aspnetcore.blazor.browser\0.5.1\lib\netstandard2.0\Microsoft.AspNetCore.Blazor.Browser.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
+  <Import Project="..\..\build\build.props"/>
 </Project>

@@ -1,13 +1,36 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>net46;netstandard2.0</TargetFrameworks>
+        <TargetFrameworks>net46;netstandard2.0;net20;netstandard1.0</TargetFrameworks>
         <DebugType>portable</DebugType>
+        <IncludeBuildOutput>false</IncludeBuildOutput>
+        <EnableDefaultCompileItems Condition="'$(TargetFramework)' == 'net20'">false</EnableDefaultCompileItems>
+        <EnableDefaultCompileItems Condition="'$(TargetFramework)' == 'netstandard1.0'">false</EnableDefaultCompileItems>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="FodyHelpers" Version="3.1.4" />
+        <PackageReference Condition="'$(TargetFramework)' == 'net46'" Include="FodyHelpers" Version="3.1.4" PrivateAssets="all" />
+        <PackageReference Condition="'$(TargetFramework)' == 'netstandard2.0'" Include="FodyHelpers" Version="3.1.4" PrivateAssets="all" />
     </ItemGroup>
     <Target Name="CopyWeavers" AfterTargets="CopyFilesToOutputDirectory">
         <Copy Condition="'$(TargetFramework)' == 'netstandard2.0'" SourceFiles="$(OutputPath)/NObservable.Fody.dll" DestinationFolder="$(MSBuildThisfileDirectory)\..\..\Tools" />
         <Copy Condition="'$(TargetFramework)' == 'netstandard2.0'" SourceFiles="$(OutputPath)/NObservable.Fody.pdb" DestinationFolder="$(MSBuildThisfileDirectory)\..\..\Tools" />
     </Target>
+    <ItemGroup>
+        <Content Include="bin\$(Configuration)\netstandard2.0\NObservable.Fody.dll">
+            <Pack>true</Pack>
+            <PackagePath>netstandardweaver\</PackagePath>
+        </Content>
+        <Content Include="bin\$(Configuration)\netstandard2.0\NObservable.Fody.pdb">
+            <Pack>true</Pack>
+            <PackagePath>netstandardweaver\</PackagePath>
+        </Content>
+        <Content Include="bin\$(Configuration)\net46\NObservable.Fody.dll">
+            <Pack>true</Pack>
+            <PackagePath>netclassicweaver\</PackagePath>
+        </Content>
+        <Content Include="bin\$(Configuration)\net46\NObservable.Fody.pdb">
+            <Pack>true</Pack>
+            <PackagePath>netclassicweaver\</PackagePath>
+        </Content>
+    </ItemGroup>
+    <Import Project="..\..\build\build.props"/>
 </Project>

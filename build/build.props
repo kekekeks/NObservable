@@ -1,0 +1,8 @@
+<Project>
+    <PropertyGroup>
+        <Description>IL-instrumentation based observables</Description>
+        <Authors>kekekeks</Authors>
+        <PackageLicenseUrl>https://github.com/kekekeks/NObservable/blob/master/LICENSE</PackageLicenseUrl>
+        <PackageProjectUrl>https://github.com/kekekeks/NObservable</PackageProjectUrl>
+    </PropertyGroup>
+</Project>

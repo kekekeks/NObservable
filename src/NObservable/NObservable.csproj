@@ -1,11 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
-        <TargetFrameworks>netstandard2.0;netstandard1.3;net451</TargetFrameworks>
+        <TargetFrameworks>netstandard2.0;net451</TargetFrameworks>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Fody" Version="3.1.4" PrivateAssets="None" />
-        <PackageReference Include="FodyPackaging" Version="3.1.4" PrivateAssets="All" />
     </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\NObservable.Fody\NObservable.Fody.csproj" />
+    </ItemGroup>
+    <Import Project="..\..\build\build.props"/>
 </Project>
