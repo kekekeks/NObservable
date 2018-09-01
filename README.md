@@ -129,7 +129,7 @@ Works like [runInAction](https://mobx.js.org/best/actions.html#the-runinaction-u
 Groups multiple property updates so change reactions won't be triggered on *each* property set call.
 
 Proper method instrumentation ([@action decorator](https://mobx.js.org/refguide/action.html) alternative)
-aren't implemented **yet**, but unlike MobX it would be possible to make them properly work with `async` functions.
+isn't implemented **yet**, but unlike MobX it would be possible to make it properly work with `async` functions.
 
 ```cs
 var o = new Foo{Prop1 = 1};
