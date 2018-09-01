@@ -172,7 +172,7 @@ public void Configure(IBlazorApplicationBuilder app)
 Add `@using NObservable.Blazor` to `_ViewImports.cshtml`.
 
 
-Add `@implements @implements IObserverComponent` at the top of your blazor component
+Add `@implements IObserverComponent` at the top of your blazor component
 
 
 
