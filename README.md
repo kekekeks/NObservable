@@ -113,7 +113,7 @@ Prop1: 3, Prop2: 3
 ### When
 
 Works like [when](https://mobx.js.org/refguide/autorun.html) from MobX. 
-Either returns a task that completed when observed condition is met or runs a provided callback:
+Either returns a task that completes when observed condition is met or runs a provided callback:
 
 ```cs
 
@@ -126,7 +126,7 @@ Observe.When(() => o.Prop2 == 5, () => Console.WriteLine("callback"));
 ### RunInAction
 
 Works like [runInAction](https://mobx.js.org/best/actions.html#the-runinaction-utility) from MobX.
-Groups multiple property updates so change reactions won't be triggered on *each* prop.
+Groups multiple property updates so change reactions won't be triggered on *each* property set call.
 
 Proper method instrumentation ([@action decorator](https://mobx.js.org/refguide/action.html) alternative)
 aren't implemented **yet**, but unlike MobX it would be possible to make them properly work with `async` functions.
