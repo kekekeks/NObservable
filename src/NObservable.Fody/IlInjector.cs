@@ -14,45 +14,69 @@ namespace NObservable.Fody
 {
     public static class IlInjector
     {
-        private const string FieldName = "NObservable_2aa5c83d645c4ab18e9c22a3ebba7960";
+        private const string TrackerFieldName = "NObservable_2aa5c83d645c4ab18e9c22a3ebba7960";
+        private const string BlazorHelperFieldName = "NObservableBlazorHelper_565c2f9b447043faaf97a44c9cc4fcdd";
 
-        static FieldReference FindTrackerField(TypeDefinition type)
+        static FieldReference FindTrackerField(TypeDefinition type, string fieldName)
         {
             if (type == null)
                 return null;
-            var found = type.Fields.FirstOrDefault(f => f.Name == FieldName);
+            var found = type.Fields.FirstOrDefault(f => f.Name == fieldName);
             if (found != null)
                 return found;
-            return FindTrackerField(type.BaseType?.Resolve());
+            return FindTrackerField(type.BaseType?.Resolve(), fieldName);
         }
         
-        public static FieldReference FindOrInjectTrackerField(WeavingContext context, TypeDefinition type)
+        static FieldReference FindOrInjectField(WeavingContext context, TypeDefinition type,
+            string fieldName, TypeReference fieldType, Action<Helper, FieldDefinition> builder)
+        
         {
-            var found = FindTrackerField(type);
+            var found = FindTrackerField(type, fieldName);
             if (found != null)
                 return found;
-            var field = new FieldDefinition(FieldName, FieldAttributes.FamANDAssem,
-                context.PropertyTrackerReference);
+            var field = new FieldDefinition(fieldName, FieldAttributes.FamANDAssem, fieldType);
             type.Fields.Add(field);
             foreach (var ctor in type.GetConstructors())
             {
                 using (var il = new Helper(ctor))
                 {
-                    var first = ctor.Body.Instructions.First();
-                    il.AddBefore(first, new Instructions
-                    {
-                        OpCodes.Ldarg_0,
-                        {OpCodes.Ldflda, field},
-                        {OpCodes.Call, context.PropertyTrackerInitReference}
-
-                    });
+                    builder(il, field);
                 }
             }
-            
-            
-            
-            
             return field;
+        }
+
+        static FieldReference FindOrInjectTrackerField(WeavingContext context, TypeDefinition type)
+        {
+            return FindOrInjectField(context, type, TrackerFieldName, context.PropertyTrackerReference, (il, field) =>
+            {
+                var first = il.Body.Instructions.First();
+                il.AddBefore(first, new Instructions
+                {
+                    OpCodes.Ldarg_0,
+                    {OpCodes.Ldflda, field},
+                    {OpCodes.Call, context.PropertyTrackerInitReference}
+
+                });
+            });
+        }
+
+        static FieldReference FindOrInjectBlazorHelperField(WeavingContext context, TypeDefinition type)
+        {
+            return FindOrInjectField(context, type, BlazorHelperFieldName, context.BlazorComponentHelperReference,
+                (il, field) =>
+                {
+                    il.AddBefore(il.Body.Instructions.First(), new Instructions
+                    {
+                        OpCodes.Ldarg_0,
+                        {OpCodes.Ldfld, field},
+                        {OpCodes.Brtrue, il.Body.Instructions.First()},
+                        OpCodes.Ldarg_0,
+                        OpCodes.Ldarg_0,
+                        {OpCodes.Newobj, context.BlazorComponentHelperCtorReference},
+                        {OpCodes.Stfld, field}
+                    });
+                });
         }
 
         static int FindBaseTypeObservablePropertyCount(TypeDefinition typeDef)
@@ -228,6 +252,57 @@ namespace NObservable.Fody
             }
         }
 
+        public static void InstrumentBlazorComponent(WeavingContext context, TypeDefinition type)
+        {
+            var field = FindOrInjectBlazorHelperField(context, type);
+            var method = type.Methods.First(m => m.Name == "BuildRenderTree");
+            using (var il = new Helper(method))
+            {
+                var originalFirst = il.Body.Instructions.First();
+
+                il.AddBefore(originalFirst, new Instructions()
+                {
+                    OpCodes.Ldarg_0,
+                    {OpCodes.Ldfld, field},
+                    {OpCodes.Callvirt, context.BlazorComponentHelperOnRenderEnterReference}
+                });
+                
+                
+                var lastRet = Instruction.Create(OpCodes.Ret);
+                il.Append(lastRet);
+
+                var leaveTry = Instruction.Create(OpCodes.Leave_S, lastRet);
+                if (lastRet.Previous.OpCode == OpCodes.Ret)
+                    il.Replace(lastRet.Previous, leaveTry);
+                else
+                    il.AddBefore(lastRet, leaveTry);
+                foreach (var i in method.Body.Instructions.Where(x => x.OpCode == OpCodes.Ret && x != lastRet).ToList())
+                {
+                    il.Replace(i, Instruction.Create(OpCodes.Leave_S, lastRet));
+                }
+
+                var leaveFinally = Instruction.Create(OpCodes.Endfinally);
+                il.AddBefore(lastRet, leaveFinally);
+                
+                
+                il.AddBefore(leaveFinally, new Instructions()
+                {
+                    OpCodes.Ldarg_0,
+                    {OpCodes.Ldfld, field},
+                    {OpCodes.Callvirt, context.BlazorComponentHelperOnRenderLeaveReference}
+                });
+                
+                il.Body.ExceptionHandlers.Add(new ExceptionHandler(ExceptionHandlerType.Finally)
+                {
+                    TryStart = originalFirst,
+                    TryEnd = leaveTry.Next,
+                    HandlerStart = leaveTry.Next,
+                    HandlerEnd = leaveFinally.Next
+                });
+                
+            }
+        }
+
         class Helper : IDisposable
         {
             private readonly MethodDefinition _method;
@@ -239,6 +314,8 @@ namespace NObservable.Fody
                 _processor = method.Body.GetILProcessor();
             }
 
+            public MethodBody Body => _method.Body;
+            
             public Helper AddBefore(Instruction before, params Instruction[] instructions)
                 => AddBefore(before, (IEnumerable<Instruction>) instructions);
             

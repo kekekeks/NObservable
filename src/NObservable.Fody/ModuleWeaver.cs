@@ -24,6 +24,15 @@ public class ModuleWeaver : BaseModuleWeaver
         }
     }
 
+    bool IsBlazorComponent(TypeDefinition type)
+    {
+        if (type == null)
+            return false;
+        if (type.FullName == "Microsoft.AspNetCore.Blazor.Components.BlazorComponent")
+            return true;
+        return IsBlazorComponent(type.BaseType?.Resolve());
+    }
+
     public override void Execute()
     {
         if (Environment.GetEnvironmentVariable("NOBSERVABLE_DEBUG_ATTACH") == "1")
@@ -35,17 +44,10 @@ public class ModuleWeaver : BaseModuleWeaver
             }
         }
 
-        var context = new WeavingContext(TypeSystem, ModuleDefinition);
+        var context = new WeavingContext(TypeSystem, this, ModuleDefinition);
         foreach (var t in AllTypes(ModuleDefinition.Types))
         {
             var observeAll = t.CustomAttributes.Any(ca => ca.AttributeType.AreEqual(context.ObservableAttributeReference));
-            FieldReference field = null;
-
-            if (t.Name.StartsWith("BasicEngineTest"))
-            {
-                var set = t.GetMethods().First(m => m.Name == "Wtf");
-                Console.WriteLine();
-            }
             foreach (var p in t.Properties)
             {
                 var getter = p.GetMethod;
@@ -58,11 +60,17 @@ public class ModuleWeaver : BaseModuleWeaver
                     p.CustomAttributes.Any(ca => ca.AttributeType.AreEqual(context.ObservableAttributeReference)))
                     IlInjector.InstrumentProperty(context, p);
             }
+
+            if (context.BlazorHelperAsm != null && IsBlazorComponent(t))
+            {
+                if (t.Interfaces.Any(iface => iface.InterfaceType.FullName == "NObservable.Blazor.IObserverComponent"))
+                    IlInjector.InstrumentBlazorComponent(context, t);
+            }
         }
     }
     
     public override IEnumerable<string> GetAssembliesForScanning()
     {
-        return new[] {"mscorlib", "netstandard", "NObservable"};
+        return new[] {"mscorlib", "netstandard", "NObservable", "NObservable.Blazor"};
     }
 }

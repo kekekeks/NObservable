@@ -118,6 +118,21 @@ namespace NObservable
             return values;
         }
 
+        
+        public List<TrackedValueId> StartTrackingSession()
+        {
+            var values = new List<TrackedValueId>();
+            _trackers.Push(values);
+            return values;
+        }
+
+        public void EndTrackingSession()
+        {
+            _trackers.Pop();
+        }
+
+        
+        
         public void Subscribe(Subscription subscription, List<TrackedValueId> valueIds)
         {
             if (subscription.Subscriptions?.Count > 0)

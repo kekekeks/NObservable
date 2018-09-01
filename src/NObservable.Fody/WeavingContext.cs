@@ -7,6 +7,7 @@ namespace NObservable.Fody
 {
     public  class WeavingContext
     {
+        private readonly ModuleWeaver _weaver;
         public TypeSystem TypeSystem { get; }
         public ModuleDefinition ModuleDefinition { get; }
         public AssemblyDefinition NObservableAsm { get; }
@@ -21,13 +22,40 @@ namespace NObservable.Fody
         public MethodReference PropertyTrackerEnterTrackSetReference { get; }        
         public MethodReference PropertyTrackerLeaveTrackSetReference { get; }        
         
-        public WeavingContext(TypeSystem typeSystem, ModuleDefinition moduleDefinition)
+        
+        public AssemblyDefinition BlazorHelperAsm { get; }
+        public TypeReference BlazorComponentHelperReference { get; }
+        public MethodReference BlazorComponentHelperCtorReference { get; }
+        public MethodReference BlazorComponentHelperOnRenderEnterReference { get; }
+        public MethodReference BlazorComponentHelperOnRenderLeaveReference { get; }
+        
+        public WeavingContext(TypeSystem typeSystem, ModuleWeaver weaver, ModuleDefinition moduleDefinition)
         {
+            _weaver = weaver;
             TypeSystem = typeSystem;
             ModuleDefinition = moduleDefinition;
-            var nobservableRef = ModuleDefinition.AssemblyReferences.FirstOrDefault(asm => asm.Name == "NObservable");
+            
+            var blazorRef = moduleDefinition.AssemblyReferences.FirstOrDefault(asm => asm.Name == "NObservable.Blazor");
+            if (blazorRef != null)
+            {
+                var helperType = "NObservable.Blazor.Internals.NObservableBlazorComponentHelper";
+                BlazorHelperAsm = ModuleDefinition.AssemblyResolver.Resolve(blazorRef);
+                BlazorComponentHelperReference = ImportType(BlazorHelperAsm, helperType);
+                BlazorComponentHelperCtorReference =
+                    ImportMethod(BlazorHelperAsm, helperType, ".ctor");
+                BlazorComponentHelperOnRenderEnterReference =
+                    ImportMethod(BlazorHelperAsm, helperType, "OnRenderEnter");
+                BlazorComponentHelperOnRenderLeaveReference =
+                    ImportMethod(BlazorHelperAsm, helperType, "OnRenderLeave");
+
+            }
+
+
+            var nobservableRef = ModuleDefinition.AssemblyReferences.FirstOrDefault(asm => asm.Name == "NObservable")
+                                 ?? BlazorHelperAsm?.MainModule.AssemblyReferences.FirstOrDefault(asm =>
+                                     asm.Name == "NObservable");
             if (nobservableRef == null)
-                throw new Exception("Reference to NObervable not found");
+                Abort("Reference to NObservable not found");
             NObservableAsm = ModuleDefinition.AssemblyResolver.Resolve(nobservableRef);
 
             PropertyTrackerReference = ImportType("NObservable.Internals.PropertyTracker");
@@ -40,24 +68,39 @@ namespace NObservable.Fody
             PropertyCountAttributeReference = ImportType("NObservable.Internals.NObservablePropertyCountAttribute");
             PropertyCountAttributeCtorReference =
                 ImportMethod("NObservable.Internals.NObservablePropertyCountAttribute", ".ctor");
+
+            
         }
 
-        public TypeReference ImportType(string name)
+        void Abort(string message)
         {
-            var type = NObservableAsm.MainModule.GetType(name);
+            _weaver.LogError(message);
+            throw new Exception(message);
+        }
+
+        public TypeReference ImportType(string name) => ImportType(NObservableAsm, name);
+        public TypeReference ImportType(AssemblyDefinition asm, string name)
+        {
+            var type = asm.MainModule.GetType(name);
             if (type == null)
-                throw new Exception($"{name} not found");
+            {
+                Abort($"{name} not found");
+            }
+
             return ModuleDefinition.ImportReference(type);
         }
 
-        public MethodReference ImportMethod(string typeName, string methodName)
+        public MethodReference ImportMethod(string typeName, string methodName) =>
+            ImportMethod(NObservableAsm, typeName, methodName);
+        
+        public MethodReference ImportMethod(AssemblyDefinition asm, string typeName, string methodName)
         {
-            var type = NObservableAsm.MainModule.GetType(typeName);
+            var type = asm.MainModule.GetType(typeName);
             if (type == null)
-                throw new Exception($"{typeName} not found");
+                Abort($"{typeName} not found");
             var method = type.Methods.FirstOrDefault(m => m.Name == methodName);
             if (method == null)
-                throw new Exception($"{typeName}::{methodName} not found");
+                Abort($"{typeName}::{methodName} not found");
             return ModuleDefinition.ImportReference(method);
         }
     }

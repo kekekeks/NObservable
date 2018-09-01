@@ -1,7 +1,9 @@
 using System;
+using System.ComponentModel;
 
 namespace NObservable.Internals
 {
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public struct PropertyTracker
     {
         private Context _context;
