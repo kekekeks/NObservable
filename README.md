@@ -1,6 +1,6 @@
-# IL-instrumentation-based obvervables for C#
+# IL-instrumentation-based observables for C#
 
-The idea is to implement something like MobX for .NET and to mirror its API when it's possible and makes sense.
+The idea is to implement something like MobX for .NET and to mirror its API when it's possible and makes sense. Library is originally intended to be used with Blazor, but isn't limited to that, so Blazor-specific bits live in a separate package.
 
 For now library supports:
 
