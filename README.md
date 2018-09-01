@@ -1,6 +1,6 @@
 # IL-instrumentation-based obvervables for C#
 
-The idea is to implement something like MobX for .NET and to mirror it's API when it's possible and makes sense.
+The idea is to implement something like MobX for .NET and to mirror its API when it's possible and makes sense.
 
 For now library supports:
 
