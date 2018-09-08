@@ -16,7 +16,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NObservable.Blazor\NObservable.Blazor.csproj" />
-    <ProjectReference Include="..\..\src\NObservable.Fody\NObservable.Fody.csproj" />
     <ProjectReference Include="..\..\src\NObservable\NObservable.csproj" />
   </ItemGroup>
 

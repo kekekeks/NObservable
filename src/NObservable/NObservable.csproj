@@ -6,7 +6,7 @@
     <ItemGroup>
         <PackageReference Include="Fody" Version="3.1.4" PrivateAssets="None" />
     </ItemGroup>
-    <ItemGroup>
+    <ItemGroup Condition="'$(BuildMode)' == 'nuget'">
       <ProjectReference Include="..\NObservable.Fody\NObservable.Fody.csproj" />
     </ItemGroup>
     <Import Project="..\..\build\build.props"/>

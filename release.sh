@@ -9,14 +9,13 @@ fi
 VERSION=$1
 cd $DIR
 set -x
-msbuild /t:Restore /p:Version=$VERSION
 rm -rf build-packages
 mkdir build-packages
 rm -rf src/*/bin/Release
 
-VARGS="/p:Version=$VERSION /p:Configuration=Release"
+VARGS="/p:Version=$VERSION /p:Configuration=Release /p:BuildMode=nuget"
 MSB="msbuild $VARGS"
-
+$MSB /t:Restore
 $MSB /t:Clean
 for p in NObservable NObservable.Fody NObservable.Blazor
 do
