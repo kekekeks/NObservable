@@ -1,7 +1,10 @@
 @inherits BlazorLayoutComponent
+@inject AppModel app
+@implements IObserverComponent
 
 <div class="main">
     <div class="top-row px-4">
+        @app.Counter
         <a href="https://github.com/kekekeks/NObservable" target="_blank" class="ml-md-auto">About</a>
     </div>
 

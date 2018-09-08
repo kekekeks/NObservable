@@ -67,6 +67,8 @@ namespace NObservable.Blazor.Internals
             }
         }
 
+        public void OnParametersSet() => _shouldRender = true;
+
         public bool ShouldRender() => _shouldRender;
     }
 }

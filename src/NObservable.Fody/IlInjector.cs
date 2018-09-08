@@ -301,29 +301,61 @@ namespace NObservable.Fody
                 });
                 
             }
-
+            var blazorComponent = type.FindBaseType(t =>
+                t.FullName == "Microsoft.AspNetCore.Blazor.Components.BlazorComponent");
             if (!(type.Methods.Any(m => m.Name == "ShouldRender" && m.DeclaringType == type)))
             {
-                var blazorComponent = type.FindBaseType(t =>
-                    t.FullName == "Microsoft.AspNetCore.Blazor.Components.BlazorComponent");
-                if (blazorComponent != null)
+                var baseMethod = blazorComponent.Methods.First(m =>
+                    m.Name == "ShouldRender" && m.Attributes.HasFlag(MethodAttributes.Virtual));
+                var shouldRender = CreateMethodOverride(type, baseMethod);
+                using (var il = new Helper(shouldRender))
                 {
-                    var baseMethod = blazorComponent.Methods.First(m =>
-                        m.Name == "ShouldRender" && m.Attributes.HasFlag(MethodAttributes.Virtual));
-                    var shouldRender = CreateMethodOverride(type, baseMethod);
-                    using (var il = new Helper(shouldRender))
+                    il.Append(new Instructions
                     {
-                        il.Append(new Instructions
-                        {
-                            OpCodes.Ldarg_0,
-                            {OpCodes.Ldfld, field},
-                            {OpCodes.Callvirt, context.BlazorComponentHelperShouldRenderReference},
-                            OpCodes.Ret
-                        });
-                    }
-                    
+                        OpCodes.Ldarg_0,
+                        {OpCodes.Ldfld, field},
+                        {OpCodes.Callvirt, context.BlazorComponentHelperShouldRenderReference},
+                        OpCodes.Ret
+                    });
                 }
             }
+            
+            var onParametersSetBase = FindClosestOverride(type, "OnParametersSet");
+            var onParametersSet = CreateMethodOverride(type, onParametersSetBase);
+            if (onParametersSetBase.DeclaringType == type)
+            {
+                onParametersSetBase.Attributes &= ~MethodAttributes.MemberAccessMask;
+                onParametersSetBase.Attributes |= MethodAttributes.NewSlot | MethodAttributes.Private;
+                onParametersSetBase.Name += "_Original_" + Guid.NewGuid().ToString().Replace("-", "");
+            }
+
+            using (var il = new Helper(onParametersSet))
+            {
+                var baseRef = onParametersSetBase.DeclaringType.Module == type.Module
+                    ? onParametersSetBase 
+                      : type.Module.ImportReference(onParametersSetBase); 
+                il.Append(new Instructions
+                {
+                    OpCodes.Ldarg_0,
+                    {OpCodes.Ldfld, field},
+                    {OpCodes.Callvirt, context.BlazorComponentHelperShouldRenderReference},
+                    OpCodes.Ldarg_0,
+                    {OpCodes.Call, baseRef},
+                    OpCodes.Ret
+                });
+            }
+
+        }
+
+        static MethodDefinition FindClosestOverride(this TypeDefinition def, string methodName)
+        {
+            if (def == null)
+                return null;
+            var m = def.Methods.FirstOrDefault(x => x.Name == methodName && !x.HasParameters && !x.HasGenericParameters);
+            if (m != null)
+                return m;
+
+            return FindClosestOverride(def.BaseType?.Resolve(), methodName);
         }
 
         static TypeDefinition FindBaseType(this TypeDefinition def, Func<TypeDefinition, bool> condition)

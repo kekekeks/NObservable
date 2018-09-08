@@ -29,6 +29,7 @@ namespace NObservable.Fody
         public MethodReference BlazorComponentHelperOnRenderEnterReference { get; }
         public MethodReference BlazorComponentHelperOnRenderLeaveReference { get; }
         public MethodReference BlazorComponentHelperShouldRenderReference { get; }
+        public MethodReference BlazorComponentHelperOnParametersSetReference { get; }
         
         public WeavingContext(TypeSystem typeSystem, ModuleWeaver weaver, ModuleDefinition moduleDefinition)
         {
@@ -50,6 +51,8 @@ namespace NObservable.Fody
                     ImportMethod(BlazorHelperAsm, helperType, "OnRenderLeave");
                 BlazorComponentHelperShouldRenderReference =
                     ImportMethod(BlazorHelperAsm, helperType, "ShouldRender");
+                BlazorComponentHelperOnParametersSetReference =
+                    ImportMethod(BlazorHelperAsm, helperType, "OnParametersSet");
             }
 
 
