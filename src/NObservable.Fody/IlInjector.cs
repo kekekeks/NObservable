@@ -338,7 +338,7 @@ namespace NObservable.Fody
                 {
                     OpCodes.Ldarg_0,
                     {OpCodes.Ldfld, field},
-                    {OpCodes.Callvirt, context.BlazorComponentHelperShouldRenderReference},
+                    {OpCodes.Callvirt, context.BlazorComponentHelperOnParametersSetReference},
                     OpCodes.Ldarg_0,
                     {OpCodes.Call, baseRef},
                     OpCodes.Ret
