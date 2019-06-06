@@ -84,18 +84,21 @@ If any of observed properties changes, callback will be run again and new proper
 ```cs
 
 var o = new Foo{Prop1 = 1, Prop2 = 1};
+Console.WriteLine("Initial run");
 Observe.Autorun(() => {
-     Console.WriteLine($"Prop1: {o.Prop1}");
-     if(o.Prop1 == 3)
+    Console.WriteLine($"Prop1: {o.Prop1}");
+    if(o.Prop1 == 3)
         Console.WriteLine($"Prop1: {o.Prop1} Prop2: {o.Prop2}");
-     else
-        Console.WriteLine($"Prop1: {o.Prop1});    
+    else
+        Console.WriteLine($"Prop1: {o.Prop1}");    
 });
-
+Console.WriteLine("Setting Prop1 = 2");
 o.Prop1 = 2;
+Console.WriteLine("Setting Prop2 = 2");
 o.Prop2 = 2;
-
+Console.WriteLine("Setting Prop1 = 3");
 o.Prop1 = 3;
+Console.WriteLine("Setting Prop2 = 3");
 o.Prop2 = 3;
 
 ```
@@ -103,10 +106,19 @@ o.Prop2 = 3;
 Console output:
 
 ```
+Initial run
 Prop1: 1
+Prop1: 1
+Setting Prop1 = 2
 Prop1: 2
-Prop1: 3, Prop2: 2
-Prop1: 3, Prop2: 3
+Prop1: 2
+Setting Prop2 = 2
+Setting Prop1 = 3
+Prop1: 3
+Prop1: 3 Prop2: 2
+Setting Prop2 = 3
+Prop1: 3
+Prop1: 3 Prop2: 3
 ```
 
 
